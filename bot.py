@@ -33,7 +33,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 
     # Kiểm tra số lượng tracking_numbers
     if len(tracking_numbers) == 1:
-        # Kiểm tra nếu có sheetIndex trong tin nhắn gốc
+        # Sử dụng message_text gốc để kiểm tra sheetIndex
         if ' ' in message_text:
             tracking_number, sheet_index = message_text.rsplit(' ', 1)
             if sheet_index.isdigit():
@@ -41,6 +41,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             else:
                 url = API_URL
         else:
+            tracking_number = tracking_numbers[0]
             url = API_URL
 
         tracking_numbers = [tracking_number.strip()]
