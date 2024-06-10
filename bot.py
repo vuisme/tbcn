@@ -1,7 +1,7 @@
 import logging
 import os
-from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
+from telegram import Update
+from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
 import requests
 import re
 
@@ -22,36 +22,41 @@ async def start(update: Update, context: CallbackContext) -> None:
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
     message_text = update.message.text.strip()
-    
+
     # Kiểm tra xem mã kiện hàng có chứa khoảng trắng và số ở phía sau hay không
     if ' ' in message_text:
         tracking_number, sheet_index = message_text.rsplit(' ', 1)
         if sheet_index.isdigit():
-            url = f'{API_URL}?tracking={tracking_number}&sheetIndex={sheet_index}'
+            url = f'{API_URL}?sheetIndex={sheet_index}'
         else:
-            url = f'{API_URL}?tracking={tracking_number}'
+            url = API_URL
     else:
         tracking_number = message_text
-        url = f'{API_URL}?tracking={tracking_number}'
+        url = API_URL
 
     response = requests.get(url)
-    
+
     if response.status_code == 200:
         data = response.json()
-        
-        # Tìm phần tử trong danh sách có mã kiện hàng phù hợp
-        tracking_info = next((item for item in data if str(item.get('tracking')) == tracking_number), None)
-        
-        if tracking_info:
-            tracking = tracking_info.get('tracking', 'Không có mã')
-            imgurl = tracking_info.get('imgurl', 'Không có ảnh')
-            imgurl = re.sub(r'_(\d+x\d+\.jpg)$', '', imgurl)
-            rec = tracking_info.get('rec', False)
-            var = tracking_info.get('var', 'Không có thuộc tính')
-            sl = tracking_info.get('sl', 'Không có số lượng')
-            status = "Đã nhận hàng" if rec else "Chưa nhận hàng"
-            message = f"Mã kiện hàng: {tracking}\nTrạng thái đơn hàng: {status}\nSố lượng: {sl}\nThuộc Tính: {var}\nHình ảnh: {imgurl}"
-            await update.message.reply_text(message)
+
+        # Lọc các phần tử trong danh sách có mã kiện hàng phù hợp
+        tracking_infos = [item for item in data if str(item.get('tracking')) == tracking_number]
+
+        if tracking_infos:
+            messages = []
+            for tracking_info in tracking_infos:
+                tracking = tracking_info.get('tracking', 'Không có mã')
+                imgurl = tracking_info.get('imgurl', 'Không có ảnh')
+                imgurl = re.sub(r'_(\d+x\d+\.jpg)$', '', imgurl)
+                rec = tracking_info.get('rec', False)
+                var = tracking_info.get('var', 'Không có thuộc tính')
+                sl = tracking_info.get('sl', 'Không có số lượng')
+                status = "Đã nhận hàng" if rec else "Chưa nhận hàng"
+                message = f"Mã kiện hàng: {tracking}\nTrạng thái đơn hàng: {status}\nSố lượng: {sl}\nThuộc Tính: {var}\nHình ảnh: {imgurl}"
+                messages.append(message)
+
+            for msg in messages:
+                await update.message.reply_text(msg)
         else:
             await update.message.reply_text('Không tìm thấy mã kiện hàng này.')
     else:
