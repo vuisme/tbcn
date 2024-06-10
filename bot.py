@@ -53,9 +53,11 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if response.status_code == 200:
         data = response.json()
         for tracking_number in tracking_numbers:
-            tracking_info = next((item for item in data if str(item.get('tracking')) == tracking_number), None)
-            if tracking_info:
-                await send_tracking_info(update, tracking_info)
+            # Lọc các phần tử trong danh sách có mã kiện hàng phù hợp
+            tracking_infos = [item for item in data if str(item.get('tracking')) == tracking_number]
+            if tracking_infos:
+                for tracking_info in tracking_infos:
+                    await send_tracking_info(update, tracking_info)
             else:
                 await update.message.reply_text(f'Không tìm thấy mã kiện hàng: {tracking_number}')
     else:
