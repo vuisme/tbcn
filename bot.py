@@ -2,11 +2,12 @@ import logging
 import os
 import re
 import asyncio
+import tempfile
+import shutil
 from telegram import Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
 import requests
 import json
-from io import BytesIO
 
 # Lấy bot token và API URL từ biến môi trường
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -38,7 +39,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                 data = response.json()
                 img_urls = data.get('imageLinks', []) + data.get('videoLinks', [])
                 cleaned_urls = [clean_image_url(url) for url in img_urls]
-                await send_media_group(update, cleaned_urls)
+                await download_and_send_media(update, cleaned_urls)
             else:
                 await update.message.reply_text('Failed to fetch image details.')
         else:
@@ -94,23 +95,39 @@ def clean_image_url(url: str) -> str:
         return url.split('_')[0] + '.' + url.split('.')[-2]
     return url
 
-async def send_media_group(update: Update, media_urls: list) -> None:
-    media_groups = []
-    for i in range(0, len(media_urls), 9):
-        media_group = media_urls[i:i + 9]
-        media_objects = []
-        for media_url in media_group:
+async def download_and_send_media(update: Update, media_urls: list) -> None:
+    temp_dir = tempfile.mkdtemp()
+    try:
+        downloaded_files = []
+        for media_url in media_urls:
             response = requests.get(media_url)
             if response.status_code == 200:
-                file = BytesIO(response.content)
-                if media_url.endswith('.mp4'):
-                    media_objects.append(InputMediaVideo(file))
-                else:
-                    media_objects.append(InputMediaPhoto(file))
-        media_groups.append(media_objects)
-    
-    for media_group in media_groups:
-        await update.message.reply_media_group(media_group)
+                file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
+                file_path = os.path.join(temp_dir, os.path.basename(media_url).split('_')[0] + file_extension)
+                with open(file_path, 'wb') as f:
+                    f.write(response.content)
+                downloaded_files.append(file_path)
+            else:
+                logging.error(f"Failed to download media: {media_url}")
+
+        media_groups = []
+        for i in range(0, len(downloaded_files), 9):
+            media_group = downloaded_files[i:i + 9]
+            media_objects = []
+            for file_path in media_group:
+                with open(file_path, 'rb') as f:
+                    if file_path.endswith('.mp4'):
+                        media_objects.append(InputMediaVideo(f))
+                    else:
+                        media_objects.append(InputMediaPhoto(f))
+            media_groups.append(media_objects)
+
+        for media_group in media_groups:
+            await update.message.reply_media_group(media_group)
+
+    finally:
+        # Xóa thư mục tạm sau khi đã gửi tin nhắn
+        shutil.rmtree(temp_dir)
 
 async def send_tracking_info(update: Update, tracking_info: dict) -> None:
     tracking = tracking_info.get('tracking', 'Không có mã')
