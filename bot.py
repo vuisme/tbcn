@@ -120,17 +120,20 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
         downloaded_files = []
         for media_url in media_urls:
             logging.info('Downloading media: %s', media_url)
-            response = requests.get(media_url, stream=True)
-            if response.status_code == 200:
-                file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
-                file_name = os.path.basename(media_url).split('_')[0] + file_extension
-                file_path = os.path.join(temp_dir, file_name)
-                with open(file_path, 'wb') as f:
-                    shutil.copyfileobj(response.raw, f)
-                downloaded_files.append(file_path)
-                logging.info('Downloaded and saved media to: %s', file_path)
-            else:
-                logging.error('Failed to download media: %s', media_url)
+            try:
+                response = requests.get(media_url, stream=True)
+                if response.status_code == 200:
+                    file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
+                    file_name = os.path.basename(media_url).split('_')[0] + file_extension
+                    file_path = os.path.join(temp_dir, file_name)
+                    with open(file_path, 'wb') as f:
+                        shutil.copyfileobj(response.raw, f)
+                    downloaded_files.append(file_path)
+                    logging.info('Downloaded and saved media to: %s', file_path)
+                else:
+                    logging.error('Failed to download media: %s, status code: %d', media_url, response.status_code)
+            except Exception as e:
+                logging.error('Exception occurred while downloading media: %s, error: %s', media_url, str(e))
 
         media_groups = []
         for i in range(0, len(downloaded_files), 9):
