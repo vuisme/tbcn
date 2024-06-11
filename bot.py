@@ -2,19 +2,19 @@ import logging
 import os
 import re
 import asyncio
-from telegram import Update
+from telegram import Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
 import requests
 import json
+from io import BytesIO
 
 # Lấy bot token và API URL từ biến môi trường
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 API_URL = os.getenv('API_URL')
 API_TB = os.getenv('API_TB')
-# Thiết lập logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
 
+# Thiết lập logging
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Hàm khởi đầu khi bắt đầu bot
@@ -37,8 +37,8 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             if response.status_code == 200:
                 data = response.json()
                 img_urls = data.get('imageLinks', []) + data.get('videoLinks', [])
-                for img_url in img_urls:
-                  await send_image(update, img_url)
+                cleaned_urls = [clean_image_url(url) for url in img_urls]
+                await send_media_group(update, cleaned_urls)
             else:
                 await update.message.reply_text('Failed to fetch image details.')
         else:
@@ -89,13 +89,28 @@ def extract_taobao_id(url: str) -> str:
     taobao_id = url.split('=')[-1]
     return taobao_id
 
-async def send_image(update: Update, img_url: str) -> None:
-    response = requests.get(img_url)
-    if response.status_code == 200:
-        file = BytesIO(response.content)
-        await update.message.reply_document(file=file)
-    else:
-        await update.message.reply_text(f'Failed to download image: {img_url}')
+def clean_image_url(url: str) -> str:
+    if '!!' in url:
+        return url.split('_')[0] + '.' + url.split('.')[-2]
+    return url
+
+async def send_media_group(update: Update, media_urls: list) -> None:
+    media_groups = []
+    for i in range(0, len(media_urls), 9):
+        media_group = media_urls[i:i + 9]
+        media_objects = []
+        for media_url in media_group:
+            response = requests.get(media_url)
+            if response.status_code == 200:
+                file = BytesIO(response.content)
+                if media_url.endswith('.mp4'):
+                    media_objects.append(InputMediaVideo(file))
+                else:
+                    media_objects.append(InputMediaPhoto(file))
+        media_groups.append(media_objects)
+    
+    for media_group in media_groups:
+        await update.message.reply_media_group(media_group)
 
 async def send_tracking_info(update: Update, tracking_info: dict) -> None:
     tracking = tracking_info.get('tracking', 'Không có mã')
