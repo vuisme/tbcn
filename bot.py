@@ -42,7 +42,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             if response.status_code == 200:
                 data = response.json()
                 logging.info('API_TB Response data: %s', data)
-                img_urls = data.get('imageLinks', []) + data.get('videoLinks', []) data.get('skuImages', [])
+                img_urls = data.get('imageLinks', []) + data.get('videoLinks', []) + data.get('skuImages', [])
                 cleaned_urls = [clean_image_url(url) for url in img_urls]
                 logging.info('Cleaned URLs: %s', cleaned_urls)
                 await download_and_send_media(update, cleaned_urls)
