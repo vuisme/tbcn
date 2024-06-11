@@ -36,7 +36,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 
             if response.status_code == 200:
                 data = response.json()
-                img_url = data.get('image_url')
+                img_url = data.get('videoLinks')
                 if img_url:
                     await update.message.reply_text(f'Image URL: {img_url}')
                 else:
