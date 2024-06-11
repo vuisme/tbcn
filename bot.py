@@ -8,6 +8,7 @@ from telegram import Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
 import requests
 import json
+import time
 
 # Lấy bot token và API URL từ biến môi trường
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -121,17 +122,31 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
         for media_url in media_urls:
             logging.info('Downloading media: %s', media_url)
             try:
-                response = requests.get(media_url, stream=True)
-                if response.status_code == 200:
-                    file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
-                    file_name = os.path.basename(media_url).split('_')[0] + file_extension
-                    file_path = os.path.join(temp_dir, file_name)
-                    with open(file_path, 'wb') as f:
-                        shutil.copyfileobj(response.raw, f)
-                    downloaded_files.append(file_path)
-                    logging.info('Downloaded and saved media to: %s', file_path)
-                else:
-                    logging.error('Failed to download media: %s, status code: %d', media_url, response.status_code)
+                headers = {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+                success = False
+                attempts = 0
+                while not success and attempts < 3:  # Thử tối đa 3 lần
+                    response = requests.get(media_url, headers=headers, stream=True)
+                    if response.status_code == 200:
+                        file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
+                        file_name = os.path.basename(media_url).split('_')[0] + file_extension
+                        file_path = os.path.join(temp_dir, file_name)
+                        with open(file_path, 'wb') as f:
+                            shutil.copyfileobj(response.raw, f)
+                        downloaded_files.append(file_path)
+                        logging.info('Downloaded and saved media to: %s', file_path)
+                        success = True
+                    elif response.status_code == 420:
+                        logging.warning('Rate limited, waiting to retry: %s', media_url)
+                        time.sleep(1)  # Chờ 1 giây trước khi thử lại
+                    else:
+                        logging.error('Failed to download media: %s, status code: %d', media_url, response.status_code)
+                        break
+                    attempts += 1
+
+                time.sleep(1)  # Thêm độ trễ để tránh giới hạn tốc độ yêu cầu
             except Exception as e:
                 logging.error('Exception occurred while downloading media: %s, error: %s', media_url, str(e))
 
