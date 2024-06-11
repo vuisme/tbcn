@@ -83,7 +83,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
         else:
             await update.message.reply_text('Không thể kết nối đến API. Vui lòng thử lại sau.')
 
-async def extract_taobao_id(url: str) -> str:
+def extract_taobao_id(url: str) -> str:
     # Implement logic to extract Taobao ID from the URL
     # Example: Extract the ID from 'https://item.taobao.com/item.htm?id=123456789'
     taobao_id = url.split('=')[-1]
