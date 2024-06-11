@@ -36,11 +36,9 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 
             if response.status_code == 200:
                 data = response.json()
-                img_url = data.get('videoLinks')
-                if img_url:
-                    await update.message.reply_text(f'Image URL: {img_url}')
-                else:
-                    await update.message.reply_text('Image not found for this Taobao ID.')
+                img_urls = data.get('imageLinks', []) + data.get('videoLinks', [])
+                for img_url in img_urls:
+                  await send_image(update, img_url)
             else:
                 await update.message.reply_text('Failed to fetch image details.')
         else:
@@ -90,7 +88,15 @@ def extract_taobao_id(url: str) -> str:
     # Example: Extract the ID from 'https://item.taobao.com/item.htm?id=123456789'
     taobao_id = url.split('=')[-1]
     return taobao_id
-  
+
+async def send_image(update: Update, img_url: str) -> None:
+    response = requests.get(img_url)
+    if response.status_code == 200:
+        file = BytesIO(response.content)
+        await update.message.reply_document(file=file)
+    else:
+        await update.message.reply_text(f'Failed to download image: {img_url}')
+
 async def send_tracking_info(update: Update, tracking_info: dict) -> None:
     tracking = tracking_info.get('tracking', 'Không có mã')
     imgurl = tracking_info.get('imgurl', 'Không có ảnh')
