@@ -131,24 +131,23 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                 while not success and attempts < 3:  # Thử tối đa 3 lần
                     response = requests.get(media_url, headers=headers, stream=True)
                     if response.status_code == 200:
-                        file_extension = '.mp4' if media_url.endswith('.mp4') else os.path.splitext(media_url)[1]
-                        file_name = os.path.basename(media_url).split('_')[0] + file_extension
-                        file_path = os.path.join(temp_dir, file_name)
-                        with open(file_path, 'wb') as f:
-                            shutil.copyfileobj(response.raw, f)
-                        if file_extension != '.mp4':
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(media_url)[1]) as tmp_file:
+                            shutil.copyfileobj(response.raw, tmp_file)
+                            tmp_file_path = tmp_file.name
+
+                        if not tmp_file_path.endswith('.mp4'):
                             try:
-                                with Image.open(file_path) as img:
+                                with Image.open(tmp_file_path) as img:
                                     if img.size[0] < 200 or img.size[1] < 200:
-                                        logging.info('Image %s is too small, skipping.', file_path)
-                                        os.remove(file_path)
-                                        continue
+                                        logging.info('Image %s is too small, skipping.', tmp_file_path)
+                                        os.remove(tmp_file_path)
+                                        break
                             except Exception as e:
-                                logging.error('Error checking image size for %s: %s', file_path, str(e))
-                                os.remove(file_path)
-                                continue
-                        downloaded_files.append(file_path)
-                        logging.info('Downloaded and saved media to: %s', file_path)
+                                logging.error('Error checking image size for %s: %s', tmp_file_path, str(e))
+                                os.remove(tmp_file_path)
+                                break
+                        downloaded_files.append(tmp_file_path)
+                        logging.info('Downloaded and saved media to: %s', tmp_file_path)
                         success = True
                     elif response.status_code == 420:
                         logging.warning('Rate limited, waiting to retry: %s', media_url)
@@ -158,7 +157,6 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                         break
                     attempts += 1
 
-                time.sleep(1)  # Thêm độ trễ để tránh giới hạn tốc độ yêu cầu
             except Exception as e:
                 logging.error('Exception occurred while downloading media: %s, error: %s', media_url, str(e))
 
