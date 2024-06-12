@@ -4,6 +4,7 @@ import re
 import asyncio
 import tempfile
 import shutil
+from PIL import Image
 from telegram import Update, InputMediaPhoto, InputMediaVideo
 from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContext, ApplicationBuilder
 import requests
@@ -42,7 +43,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             if response.status_code == 200:
                 data = response.json()
                 logging.info('API_TB Response data: %s', data)
-                img_urls = data.get('imageLinks', []) + data.get('videoLinks', []) + data.get('skuImages', [])
+                img_urls = data.get('imageLinks', []) + data.get('skuImages', []) + data.get('videoLinks', []) + data.get('descIMG', []) + data.get('descVideo', [])
                 cleaned_urls = [clean_image_url(url) for url in img_urls]
                 logging.info('Cleaned URLs: %s', cleaned_urls)
                 await download_and_send_media(update, cleaned_urls)
@@ -106,7 +107,7 @@ def extract_taobao_id(url: str) -> str:
     return taobao_id
 
 def clean_image_url(url: str) -> str:
-    match = re.match(r'(https://.*?(\.jpg|\.mp4))', url)
+    match = re.match(r'(https://.*?(\.jpg|\.jpeg|\.png|\.gif|\.bmp|\.webp|\.mp4))', url)
     if match:
         cleaned_url = match.group(1)
         logging.info('Cleaned URL: %s', cleaned_url)
@@ -130,11 +131,22 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                 while not success and attempts < 3:  # Thử tối đa 3 lần
                     response = requests.get(media_url, headers=headers, stream=True)
                     if response.status_code == 200:
-                        file_extension = '.mp4' if media_url.endswith('.mp4') else '.jpg'
+                        file_extension = '.mp4' if media_url.endswith('.mp4') else os.path.splitext(media_url)[1]
                         file_name = os.path.basename(media_url).split('_')[0] + file_extension
                         file_path = os.path.join(temp_dir, file_name)
                         with open(file_path, 'wb') as f:
                             shutil.copyfileobj(response.raw, f)
+                        if file_extension != '.mp4':
+                            try:
+                                with Image.open(file_path) as img:
+                                    if img.size[0] < 200 or img.size[1] < 200:
+                                        logging.info('Image %s is too small, skipping.', file_path)
+                                        os.remove(file_path)
+                                        continue
+                            except Exception as e:
+                                logging.error('Error checking image size for %s: %s', file_path, str(e))
+                                os.remove(file_path)
+                                continue
                         downloaded_files.append(file_path)
                         logging.info('Downloaded and saved media to: %s', file_path)
                         success = True
@@ -190,7 +202,7 @@ def main() -> None:
     application.add_handler(CommandHandler("start", start))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    # Bắt đầu bot
+    # Chạy bot
     application.run_polling()
 
 if __name__ == '__main__':
