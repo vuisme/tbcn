@@ -22,6 +22,9 @@ API_PDD = os.getenv('API_PDD')
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Thiết lập mức độ log cho thư viện httpx
+logging.getLogger('httpx').setLevel(logging.WARNING)
+
 # Hàm khởi đầu khi bắt đầu bot
 async def start(update: Update, context: CallbackContext) -> None:
     reply_func = get_reply_func(update)
@@ -51,6 +54,13 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if hasattr(update, 'business_message') and update.business_message:
         message_text = update.business_message.text
         logging.info('Received business message: %s', message_text)
+        
+        # Kiểm tra nếu tin nhắn bắt đầu bằng "/tb"
+        if not message_text.startswith('/tb'):
+            return
+
+        # Bỏ qua phần tiền tố "/tb"
+        message_text = message_text[3:].strip()
 
     # Kiểm tra và xử lý tin nhắn trực tiếp
     elif hasattr(update, 'message') and update.message:
@@ -60,13 +70,6 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if message_text:
         # Loại bỏ khoảng trắng đầu và cuối chuỗi
         message_text = message_text.strip()
-        
-        # Kiểm tra nếu tin nhắn bắt đầu bằng "/tb"
-        if not message_text.startswith('/tb'):
-            return
-
-        # Bỏ qua phần tiền tố "/tb"
-        message_text = message_text[3:].strip()
         
         if message_text.startswith('https://item.taobao.com/'):
             taobao_id = extract_taobao_id(message_text)
@@ -197,7 +200,7 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                         # Parse để lấy phần path của URL
                         parsed_url = urlparse(media_url)
                         path = parsed_url.path
-                        # Xóa các tham số query sau dấu "?"
+                        # Xóa các tham số query sau dấu ?
                         base_filename = os.path.basename(path).split('?')[0]
                         # Lấy phần mở rộng của file từ URL
                         file_extension = os.path.splitext(base_filename)[1]
