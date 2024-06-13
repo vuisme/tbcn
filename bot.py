@@ -255,7 +255,7 @@ async def send_tracking_info(update: Update, tracking_info: dict) -> None:
     rec = tracking_info.get('rec', False)
     var = tracking_info.get('var', 'Không có thuộc tính')
     sl = tracking_info.get('sl', 'Không có số lượng')
-    status = "Đã nhận hàng" nếu rec else "Chưa nhận hàng"
+    status = "Đã nhận hàng" if rec else "Chưa nhận hàng"
     message = f"Mã kiện hàng: {tracking}\nTrạng thái đơn hàng: {status}\nSố lượng: {sl}\nThuộc Tính: {var}\nHình ảnh: {imgurl}"
     await reply_func(message)
     logging.info('Sent tracking info message: %s', message)
