@@ -24,12 +24,14 @@ logger = logging.getLogger(__name__)
 
 # Hàm khởi đầu khi bắt đầu bot
 async def start(update: Update, context: CallbackContext) -> None:
-    await update.message.reply_text('Xin chào! Hãy gửi mã kiện hàng của bạn để tôi tra cứu.')
+    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
+    await reply_func('Xin chào! Hãy gửi mã kiện hàng của bạn để tôi tra cứu.')
     logging.info('Bot started.')
 
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
     message_text = None
+    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
 
     # Kiểm tra và xử lý tin nhắn từ tài khoản business
     if hasattr(update, 'business_message') and update.business_message:
@@ -67,10 +69,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                 logging.info('Cleaned URLs: %s', cleaned_urls)
                 await download_and_send_media(update, cleaned_urls)
             else:
-                await update.message.reply_text('Failed to fetch image details.')
+                await reply_func('Failed to fetch image details.')
                 logging.error('Failed to fetch image details from API_TB.')
         else:
-            await update.message.reply_text('Invalid Taobao link format.')
+            await reply_func('Invalid Taobao link format.')
             logging.warning('Invalid Taobao link format.')
     if message_text.startswith('https://mobile.yangkeduo.com/'):
         pattern = re.compile(r'goods\d*\.html')
@@ -90,10 +92,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                 logging.info('Cleaned URLs: %s', cleaned_urls)
                 await download_and_send_media(update, cleaned_urls)
             else:
-                await update.message.reply_text('Failed to fetch image details.')
+                await reply_func('Failed to fetch image details.')
                 logging.error('Failed to fetch image details from API_PDD.')
         else:
-            await update.message.reply_text('Invalid Pindoudou link format.')
+            await reply_func('Invalid Pindoudou link format.')
             logging.warning('Invalid Pindoudou link format.')
     else:
         # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
@@ -101,7 +103,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
         logging.info('Extracted tracking numbers: %s', tracking_numbers)
     
         if not tracking_numbers:
-            await update.message.reply_text('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
+            await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
             logging.warning('No valid tracking numbers found.')
             return
     
@@ -136,10 +138,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     for tracking_info in tracking_infos:
                         await send_tracking_info(update, tracking_info)
                 else:
-                    await update.message.reply_text(f'Không tìm thấy mã kiện hàng: {tracking_number}')
+                    await reply_func(f'Không tìm thấy mã kiện hàng: {tracking_number}')
                     logging.warning('No tracking info found for %s.', tracking_number)
         else:
-            await update.message.reply_text('Không thể kết nối đến API. Vui lòng thử lại sau.')
+            await reply_func('Không thể kết nối đến API. Vui lòng thử lại sau.')
             logging.error('Failed to connect to API_URL.')
 
 def extract_taobao_id(url: str) -> str:
@@ -158,6 +160,7 @@ def clean_image_url(url: str) -> str:
     return url
 
 async def download_and_send_media(update: Update, media_urls: list) -> None:
+    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
     temp_dir = tempfile.mkdtemp()
     logging.info('Created temporary directory: %s', temp_dir)
     try:
@@ -231,6 +234,7 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
         logging.info('Deleted temporary directory: %s', temp_dir)
 
 async def send_tracking_info(update: Update, tracking_info: dict) -> None:
+    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
     tracking = tracking_info.get('tracking', 'Không có mã')
     imgurl = tracking_info.get('imgurl', 'Không có ảnh')
     imgurl = re.sub(r'_(\d+x\d+\.jpg)$', '', imgurl)
@@ -239,7 +243,7 @@ async def send_tracking_info(update: Update, tracking_info: dict) -> None:
     sl = tracking_info.get('sl', 'Không có số lượng')
     status = "Đã nhận hàng" if rec else "Chưa nhận hàng"
     message = f"Mã kiện hàng: {tracking}\nTrạng thái đơn hàng: {status}\nSố lượng: {sl}\nThuộc Tính: {var}\nHình ảnh: {imgurl}"
-    await update.message.reply_text(message)
+    await reply_func(message)
     logging.info('Sent tracking info message: %s', message)
     await asyncio.sleep(1)  # Thêm thời gian nghỉ để tránh spam
 
