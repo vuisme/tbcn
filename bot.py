@@ -37,12 +37,6 @@ def get_reply_func(update: Update):
     elif hasattr(update, 'message') and update.message:
         return update.message.reply_text
 
-def get_edit_func(update: Update):
-    if hasattr(update, 'business_message') and update.business_message:
-        return update.business_message.edit_text
-    elif hasattr(update, 'message') and update.message:
-        return update.message.edit_text
-
 def get_reply_media_group_func(update: Update):
     if hasattr(update, 'business_message') and update.business_message:
         return update.business_message.reply_media_group
@@ -52,7 +46,6 @@ def get_reply_media_group_func(update: Update):
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
     reply_func = get_reply_func(update)
-    edit_func = get_edit_func(update)
     reply_media_group_func = get_reply_media_group_func(update)
     message_text = None
 
@@ -71,7 +64,6 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
         # Loại bỏ khoảng trắng đầu và cuối chuỗi
         message_text = message_text.strip()
         await reply_func("Đang phân tích liên kết...")
-        message = await update.message.reply_text("Đang phân tích liên kết...")
 
         if message_text.startswith('https://item.taobao.com/'):
             taobao_id = extract_taobao_id(message_text)
@@ -85,11 +77,11 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     data = response.json()
                     img_urls = data.get('imageLinks', []) + data.get('skuImages', []) + data.get('videoLinks', []) + data.get('descIMG', []) + data.get('descVideo', [])
                     cleaned_urls = list(set(clean_image_url(url) for url in img_urls))
-                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func, edit_func, message.message_id)
+                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                 else:
-                    await edit_func('Failed to fetch image details.')
+                    await reply_func('Failed to fetch image details.')
             else:
-                await edit_func('Invalid Taobao link format.')
+                await reply_func('Invalid Taobao link format.')
         
         elif message_text.startswith('https://mobile.yangkeduo.com/'):
             pattern = re.compile(r'goods\d*\.html')
@@ -103,17 +95,17 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     data = response.json()
                     img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
                     cleaned_urls = list(set(clean_image_url(url) for url in img_urls))
-                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func, edit_func, message.message_id)
+                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                 else:
-                    await edit_func('Failed to fetch image details.')
+                    await reply_func('Failed to fetch image details.')
             else:
-                await edit_func('Invalid Pindoudou link format.')
+                await reply_func('Invalid Pindoudou link format.')
         else:
             # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
             tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
     
             if not tracking_numbers:
-                await edit_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
+                await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
                 return
     
             # Kiểm tra số lượng tracking_numbers
@@ -144,9 +136,9 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                         for tracking_info in tracking_infos:
                             await send_tracking_info(update, tracking_info, reply_func)
                     else:
-                        await edit_func(f'Không tìm thấy mã kiện hàng: {tracking_number}')
+                        await reply_func(f'Không tìm thấy mã kiện hàng: {tracking_number}')
             else:
-                await edit_func('Không thể kết nối đến API. Vui lòng thử lại sau.')
+                await reply_func('Không thể kết nối đến API. Vui lòng thử lại sau.')
 
 def extract_taobao_id(url: str) -> str:
     # Implement logic to extract Taobao ID from the URL
@@ -160,8 +152,8 @@ def clean_image_url(url: str) -> str:
         return cleaned_url
     return url
 
-async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_media_group_func, edit_func, message_id) -> None:
-    await edit_func("Đang tải ảnh lên...")
+async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_media_group_func) -> None:
+    await reply_func("Đang tải ảnh lên...")
 
     temp_dir = tempfile.mkdtemp()
     try:
@@ -224,9 +216,9 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
         for media_group in media_groups:
             await reply_media_group_func(media_group)
 
-        await edit_func("Gửi tin nhắn hoàn tất.")
+        await reply_func("Gửi tin nhắn hoàn tất.")
     except Exception as e:
-        await edit_func("Đã xảy ra lỗi trong quá trình gửi tin nhắn.")
+        await reply_func("Đã xảy ra lỗi trong quá trình gửi tin nhắn.")
         logging.error('Error during media download or send: %s', str(e))
     finally:
         shutil.rmtree(temp_dir)
