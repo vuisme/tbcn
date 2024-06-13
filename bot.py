@@ -60,103 +60,107 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
     if message_text:
         # Loại bỏ khoảng trắng đầu và cuối chuỗi
         message_text = message_text.strip()
-        # Xử lý tiếp tin nhắn ở đây (nếu cần thiết)
-        # Ví dụ: bạn có thể gọi một hàm khác để xử lý tin nhắn này
-        # await process_message(message_text, context)
-
-    if message_text.startswith('https://item.taobao.com/'):
-        taobao_id = extract_taobao_id(message_text)
-        logging.info('Extracted Taobao ID: %s', taobao_id)
-        if taobao_id:
-            url = API_TB
-            logging.info('API_TB URL: %s', url)
-            payload = {'idsp': taobao_id}
-            headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
-            logging.info('API_TB Response status: %d', response.status_code)
-
-            if response.status_code == 200:
-                data = response.json()
-                logging.info('API_TB Response data: %s', data)
-                img_urls = data.get('imageLinks', []) + data.get('skuImages', []) + data.get('videoLinks', []) + data.get('descIMG', []) + data.get('descVideo', [])
-                cleaned_urls = [clean_image_url(url) for url in img_urls]
-                logging.info('Cleaned URLs: %s', cleaned_urls)
-                await download_and_send_media(update, cleaned_urls)
-            else:
-                await reply_func('Failed to fetch image details.')
-                logging.error('Failed to fetch image details from API_TB.')
-        else:
-            await reply_func('Invalid Taobao link format.')
-            logging.warning('Invalid Taobao link format.')
-    if message_text.startswith('https://mobile.yangkeduo.com/'):
-        pattern = re.compile(r'goods\d*\.html')
-        if pattern.search(message_text):
-            urlpdd = API_PDD
-            logging.info('API_PDD URL: %s', urlpdd)
-            payload = {'linksp': message_text}
-            headers = {'Content-Type': 'application/json'}
-            response = requests.post(urlpdd, headers=headers, data=json.dumps(payload))
-            logging.info('API_PDD Response status: %d', response.status_code)
-
-            if response.status_code == 200:
-                data = response.json()
-                logging.info('API_PDD Response data: %s', data)
-                img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
-                cleaned_urls = [clean_image_url(url) for url in img_urls]
-                logging.info('Cleaned URLs: %s', cleaned_urls)
-                await download_and_send_media(update, cleaned_urls)
-            else:
-                await reply_func('Failed to fetch image details.')
-                logging.error('Failed to fetch image details from API_PDD.')
-        else:
-            await reply_func('Invalid Pindoudou link format.')
-            logging.warning('Invalid Pindoudou link format.')
-    else:
-        # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
-        tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
-        logging.info('Extracted tracking numbers: %s', tracking_numbers)
-    
-        if not tracking_numbers:
-            await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
-            logging.warning('No valid tracking numbers found.')
+        
+        # Kiểm tra nếu tin nhắn bắt đầu bằng "/tb"
+        if not message_text.startswith('/tb'):
             return
-    
-        # Kiểm tra số lượng tracking_numbers
-        if len(tracking_numbers) == 1:
-            # Sử dụng message_text gốc để kiểm tra sheetIndex
-            if ' ' in message_text:
-                tracking_number, sheet_index = message_text.rsplit(' ', 1)
-                if sheet_index.isdigit():
-                    url = f'{API_URL}?sheetIndex={sheet_index}'
+
+        # Bỏ qua phần tiền tố "/tb"
+        message_text = message_text[3:].strip()
+        
+        if message_text.startswith('https://item.taobao.com/'):
+            taobao_id = extract_taobao_id(message_text)
+            logging.info('Extracted Taobao ID: %s', taobao_id)
+            if taobao_id:
+                url = API_TB
+                logging.info('API_TB URL: %s', url)
+                payload = {'idsp': taobao_id}
+                headers = {'Content-Type': 'application/json'}
+                response = requests.post(url, headers=headers, data=json.dumps(payload))
+                logging.info('API_TB Response status: %d', response.status_code)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    logging.info('API_TB Response data: %s', data)
+                    img_urls = data.get('imageLinks', []) + data.get('skuImages', []) + data.get('videoLinks', []) + data.get('descIMG', []) + data.get('descVideo', [])
+                    cleaned_urls = [clean_image_url(url) for url in img_urls]
+                    logging.info('Cleaned URLs: %s', cleaned_urls)
+                    await download_and_send_media(update, cleaned_urls)
                 else:
-                    url = API_URL
+                    await reply_func('Failed to fetch image details.')
+                    logging.error('Failed to fetch image details from API_TB.')
             else:
-                tracking_number = tracking_numbers[0]
-                url = API_URL
-    
-            tracking_numbers = [tracking_number.strip()]
-        else:
-            url = API_URL
-    
-        response = requests.get(url)
-        logging.info('API_URL Response status: %d', response.status_code)
-    
-        if response.status_code == 200:
-            data = response.json()
-            logging.info('API_URL Response data: %s', data)
-            for tracking_number in tracking_numbers:
-                # Lọc các phần tử trong danh sách có mã kiện hàng phù hợp
-                tracking_infos = [item for item in data if tracking_number in str(item.get('tracking'))]
-                logging.info('Filtered tracking infos for %s: %s', tracking_number, tracking_infos)
-                if tracking_infos:
-                    for tracking_info in tracking_infos:
-                        await send_tracking_info(update, tracking_info)
+                await reply_func('Invalid Taobao link format.')
+                logging.warning('Invalid Taobao link format.')
+        elif message_text.startswith('https://mobile.yangkeduo.com/'):
+            pattern = re.compile(r'goods\d*\.html')
+            if pattern.search(message_text):
+                urlpdd = API_PDD
+                logging.info('API_PDD URL: %s', urlpdd)
+                payload = {'linksp': message_text}
+                headers = {'Content-Type': 'application/json'}
+                response = requests.post(urlpdd, headers=headers, data=json.dumps(payload))
+                logging.info('API_PDD Response status: %d', response.status_code)
+
+                if response.status_code == 200:
+                    data = response.json()
+                    logging.info('API_PDD Response data: %s', data)
+                    img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
+                    cleaned_urls = [clean_image_url(url) for url in img_urls]
+                    logging.info('Cleaned URLs: %s', cleaned_urls)
+                    await download_and_send_media(update, cleaned_urls)
                 else:
-                    await reply_func(f'Không tìm thấy mã kiện hàng: {tracking_number}')
-                    logging.warning('No tracking info found for %s.', tracking_number)
+                    await reply_func('Failed to fetch image details.')
+                    logging.error('Failed to fetch image details from API_PDD.')
+            else:
+                await reply_func('Invalid Pindoudou link format.')
+                logging.warning('Invalid Pindoudou link format.')
         else:
-            await reply_func('Không thể kết nối đến API. Vui lòng thử lại sau.')
-            logging.error('Failed to connect to API_URL.')
+            # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
+            tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
+            logging.info('Extracted tracking numbers: %s', tracking_numbers)
+        
+            if not tracking_numbers:
+                await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
+                logging.warning('No valid tracking numbers found.')
+                return
+        
+            # Kiểm tra số lượng tracking_numbers
+            if len(tracking_numbers) == 1:
+                # Sử dụng message_text gốc để kiểm tra sheetIndex
+                if ' ' in message_text:
+                    tracking_number, sheet_index = message_text.rsplit(' ', 1)
+                    if sheet_index.isdigit():
+                        url = f'{API_URL}?sheetIndex={sheet_index}'
+                    else:
+                        url = API_URL
+                else:
+                    tracking_number = tracking_numbers[0]
+                    url = API_URL
+        
+                tracking_numbers = [tracking_number.strip()]
+            else:
+                url = API_URL
+        
+            response = requests.get(url)
+            logging.info('API_URL Response status: %d', response.status_code)
+        
+            if response.status_code == 200:
+                data = response.json()
+                logging.info('API_URL Response data: %s', data)
+                for tracking_number in tracking_numbers:
+                    # Lọc các phần tử trong danh sách có mã kiện hàng phù hợp
+                    tracking_infos = [item for item in data if tracking_number in str(item.get('tracking'))]
+                    logging.info('Filtered tracking infos for %s: %s', tracking_number, tracking_infos)
+                    if tracking_infos:
+                        for tracking_info in tracking_infos:
+                            await send_tracking_info(update, tracking_info)
+                    else:
+                        await reply_func(f'Không tìm thấy mã kiện hàng: {tracking_number}')
+                        logging.warning('No tracking info found for %s.', tracking_number)
+            else:
+                await reply_func('Không thể kết nối đến API. Vui lòng thử lại sau.')
+                logging.error('Failed to connect to API_URL.')
 
 def extract_taobao_id(url: str) -> str:
     # Implement logic to extract Taobao ID from the URL
