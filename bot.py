@@ -29,9 +29,25 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
-    logging.info('Received message: %s', update.business_message.text)
-    logging.info('Received message: %s', update.message.text)
-    message_text = update.message.text.strip()
+    message_text = None
+
+    # Kiểm tra và xử lý tin nhắn từ tài khoản business
+    if hasattr(update, 'business_message') and update.business_message:
+        message_text = update.business_message.text
+        logging.info('Received business message: %s', message_text)
+
+    # Kiểm tra và xử lý tin nhắn trực tiếp
+    elif hasattr(update, 'message') and update.message:
+        message_text = update.message.text
+        logging.info('Received message: %s', message_text)
+    
+    if message_text:
+        # Loại bỏ khoảng trắng đầu và cuối chuỗi
+        message_text = message_text.strip()
+        # Xử lý tiếp tin nhắn ở đây (nếu cần thiết)
+        # Ví dụ: bạn có thể gọi một hàm khác để xử lý tin nhắn này
+        # await process_message(message_text, context)
+
     if message_text.startswith('https://item.taobao.com/'):
         taobao_id = extract_taobao_id(message_text)
         logging.info('Extracted Taobao ID: %s', taobao_id)
