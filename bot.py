@@ -10,6 +10,7 @@ from telegram.ext import CommandHandler, MessageHandler, filters, CallbackContex
 import requests
 import json
 import time
+from urllib.parse import urlparse, parse_qs
 
 # Lấy bot token và API URL từ biến môi trường
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
@@ -155,7 +156,15 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                 while not success and attempts < 3:  # Thử tối đa 3 lần
                     response = requests.get(media_url, headers=headers, stream=True)
                     if response.status_code == 200:
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(media_url)[1]) as tmp_file:
+                        # Parse để lấy phần path của URL
+                        parsed_url = urlparse(media_url)
+                        path = parsed_url.path
+                        # Xóa các tham số query sau dấu "?"
+                        base_filename = os.path.basename(path).split('?')[0]
+                        # Lấy phần mở rộng của file từ URL
+                        file_extension = os.path.splitext(base_filename)[1]
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
                             shutil.copyfileobj(response.raw, tmp_file)
                             tmp_file_path = tmp_file.name
 
