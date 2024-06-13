@@ -29,6 +29,7 @@ async def start(update: Update, context: CallbackContext) -> None:
 
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
+    logging.info('Received message: %s', update.business_message.text)
     logging.info('Received message: %s', update.message.text)
     message_text = update.message.text.strip()
     if message_text.startswith('https://item.taobao.com/'):
