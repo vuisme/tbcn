@@ -24,14 +24,28 @@ logger = logging.getLogger(__name__)
 
 # Hàm khởi đầu khi bắt đầu bot
 async def start(update: Update, context: CallbackContext) -> None:
-    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
+    reply_func = get_reply_func(update)
     await reply_func('Xin chào! Hãy gửi mã kiện hàng của bạn để tôi tra cứu.')
     logging.info('Bot started.')
+
+# Hàm để lấy hàm phản hồi phù hợp (business hoặc standard)
+def get_reply_func(update: Update):
+    if hasattr(update, 'business_message') and update.business_message:
+        return update.business_message.reply_text
+    else:
+        return update.message.reply_text
+
+# Hàm để lấy hàm phản hồi media group phù hợp (business hoặc standard)
+def get_reply_media_group_func(update: Update):
+    if hasattr(update, 'business_message') and update.business_message:
+        return update.business_message.reply_media_group
+    else:
+        return update.message.reply_media_group
 
 # Hàm xử lý tin nhắn nhận được
 async def handle_message(update: Update, context: CallbackContext) -> None:
     message_text = None
-    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
+    reply_func = get_reply_func(update)
 
     # Kiểm tra và xử lý tin nhắn từ tài khoản business
     if hasattr(update, 'business_message') and update.business_message:
@@ -160,7 +174,7 @@ def clean_image_url(url: str) -> str:
     return url
 
 async def download_and_send_media(update: Update, media_urls: list) -> None:
-    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
+    reply_media_group_func = get_reply_media_group_func(update)
     temp_dir = tempfile.mkdtemp()
     logging.info('Created temporary directory: %s', temp_dir)
     try:
@@ -183,7 +197,7 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
                         base_filename = os.path.basename(path).split('?')[0]
                         # Lấy phần mở rộng của file từ URL
                         file_extension = os.path.splitext(base_filename)[1]
-                        
+
                         with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
                             shutil.copyfileobj(response.raw, tmp_file)
                             tmp_file_path = tmp_file.name
@@ -225,7 +239,7 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
             media_groups.append(media_objects)
 
         for media_group in media_groups:
-            await update.message.reply_media_group(media_group)
+            await reply_media_group_func(media_group)
             logging.info('Sent media group with %d items.', len(media_group))
 
     finally:
@@ -234,14 +248,14 @@ async def download_and_send_media(update: Update, media_urls: list) -> None:
         logging.info('Deleted temporary directory: %s', temp_dir)
 
 async def send_tracking_info(update: Update, tracking_info: dict) -> None:
-    reply_func = update.business_message.reply_text if hasattr(update, 'business_message') and update.business_message else update.message.reply_text
+    reply_func = get_reply_func(update)
     tracking = tracking_info.get('tracking', 'Không có mã')
     imgurl = tracking_info.get('imgurl', 'Không có ảnh')
     imgurl = re.sub(r'_(\d+x\d+\.jpg)$', '', imgurl)
     rec = tracking_info.get('rec', False)
     var = tracking_info.get('var', 'Không có thuộc tính')
     sl = tracking_info.get('sl', 'Không có số lượng')
-    status = "Đã nhận hàng" if rec else "Chưa nhận hàng"
+    status = "Đã nhận hàng" nếu rec else "Chưa nhận hàng"
     message = f"Mã kiện hàng: {tracking}\nTrạng thái đơn hàng: {status}\nSố lượng: {sl}\nThuộc Tính: {var}\nHình ảnh: {imgurl}"
     await reply_func(message)
     logging.info('Sent tracking info message: %s', message)
