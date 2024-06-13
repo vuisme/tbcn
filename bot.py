@@ -61,7 +61,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             logging.info('API_PDD URL: %s', urlpdd)
             payload = {'linksp': message_text}
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            response = requests.post(urlpdd, headers=headers, data=json.dumps(payload))
             logging.info('API_PDD Response status: %d', response.status_code)
 
             if response.status_code == 200:
