@@ -15,6 +15,7 @@ import time
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 API_URL = os.getenv('API_URL')
 API_TB = os.getenv('API_TB')
+API_PDD = os.getenv('API_PDD')
 
 # Thiết lập logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -53,6 +54,29 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
         else:
             await update.message.reply_text('Invalid Taobao link format.')
             logging.warning('Invalid Taobao link format.')
+    if message_text.startswith('https://mobile.yangkeduo.com/'):
+        pattern = re.compile(r'goods\d*\.html')
+        if pattern.search(message_text):
+            urlpdd = API_PDD
+            logging.info('API_PDD URL: %s', urlpdd)
+            payload = {'linksp': message_text}
+            headers = {'Content-Type': 'application/json'}
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            logging.info('API_PDD Response status: %d', response.status_code)
+
+            if response.status_code == 200:
+                data = response.json()
+                logging.info('API_PDD Response data: %s', data)
+                img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
+                cleaned_urls = [clean_image_url(url) for url in img_urls]
+                logging.info('Cleaned URLs: %s', cleaned_urls)
+                await download_and_send_media(update, cleaned_urls)
+            else:
+                await update.message.reply_text('Failed to fetch image details.')
+                logging.error('Failed to fetch image details from API_PDD.')
+        else:
+            await update.message.reply_text('Invalid Pindoudou link format.')
+            logging.warning('Invalid Pindoudou link format.')
     else:
         # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
         tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
