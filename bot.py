@@ -69,7 +69,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             taobao_id = extract_taobao_id(message_text)
             if taobao_id:
                 url = API_TB
-                payload = {'idsp': taobao_id}
+                payload = {'id': taobao_id}
                 headers = {'Content-Type': 'application/json'}
                 response = requests.post(url, headers=headers, data=json.dumps(payload))
 
