@@ -78,7 +78,8 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     logger.info(data)
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
-                    await download_and_send_media(update, img_urls, reply_func, reply_media_group_func)
+                    cleaned_urls = list(set(clean_image_url(url) for url in img_urls))
+                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                 else:
                     await reply_func('Failed to fetch image details.')
             else:
