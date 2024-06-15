@@ -78,18 +78,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     logger.info(data)
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
-                    cleaned_urls = []
-                    for item in img_urls:
-                        logger.info(item)
-                        
-                        # Xác định kiểu dữ liệu và xử lý
-                        if isinstance(item, dict) and 'url' in item and isinstance(item['url'], str):
-                            cleaned_url = clean_image_url(item['url'])
-                            cleaned_urls.append(cleaned_url)
-                        else:
-                            logger.info(f"Invalid data structure or type: {item}")
-                            pass
-                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    await download_and_send_media(update, img_urls, reply_func, reply_media_group_func)
                 else:
                     await reply_func('Failed to fetch image details.')
             else:
