@@ -78,7 +78,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     logger.info(data)
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
-                    cleaned_urls = list(set(clean_image_url(url) for url in img_urls))
+                    cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
                     await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                 else:
                     await reply_func('Failed to fetch image details.')
@@ -96,7 +96,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                 if response.status_code == 200:
                     data = response.json()
                     img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
-                    cleaned_urls = list(set(clean_image_url(url) for url in img_urls))
+                    cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
                     await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                 else:
                     await reply_func('Failed to fetch image details.')
