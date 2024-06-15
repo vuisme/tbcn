@@ -75,6 +75,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
 
                 if response.status_code == 200:
                     data = response.json()
+                    logger.info(data)
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
                     cleaned_urls = []
