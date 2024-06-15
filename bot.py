@@ -78,7 +78,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
                     for item in img_urls:
-                        print(type(item)) 
+                        if 'url' in item and isinstance(item['url'], str):
+                            print(f"URL: {item['url']}")
+                        else:
+                            print("Invalid data structure or type") 
                     cleaned_urls = []
                     for iurl in img_urls:
                         if isinstance(iurl, str):
