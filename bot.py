@@ -77,6 +77,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     data = response.json()
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
+                    cleaned_urls = []
                     for item in img_urls:
                         logger.info(item)
                         
