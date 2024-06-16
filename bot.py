@@ -156,19 +156,22 @@ def clean_image_url(url: str) -> str:
 
 async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_media_group_func) -> None:
     await reply_func("Đang tải ảnh lên...")
+    logging.info('Downloading and sending media, URLs: %s', media_urls)
 
     temp_dir = tempfile.mkdtemp()
+    logging.info('Created temporary directory: %s', temp_dir)
     try:
         downloaded_files = []
         for media_url in media_urls:
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, như Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
                 success = False
                 attempts = 0
                 while not success and attempts < 3:  # Thử tối đa 3 lần
                     response = requests.get(media_url, headers=headers, stream=True)
+                    logging.info('Media URL %s response status: %d', media_url, response.status_code)
                     if response.status_code == 200:
                         # Parse để lấy phần path của URL
                         parsed_url = urlparse(media_url)
@@ -177,15 +180,16 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
                         base_filename = os.path.basename(path).split('?')[0]
                         # Lấy phần mở rộng của file từ URL
                         file_extension = os.path.splitext(base_filename)[1]
-                        
+
                         with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
                             shutil.copyfileobj(response.raw, tmp_file)
                             tmp_file_path = tmp_file.name
+                        logging.info('Downloaded file to %s', tmp_file_path)
 
                         if not tmp_file_path.endswith('.mp4'):
                             try:
                                 with Image.open(tmp_file_path) as img:
-                                    if img.size[0] < 200 or img.size[1] < 200:
+                                    if img.size[0] < 200 hoặc img.size[1] < 200:
                                         logging.info('Image %s is too small, skipping.', tmp_file_path)
                                         os.remove(tmp_file_path)
                                         break
@@ -215,6 +219,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
                     media_objects.append(InputMediaPhoto(open(file_path, 'rb')))
             media_groups.append(media_objects)
 
+        logging.info('Sending media groups')
         for media_group in media_groups:
             await reply_media_group_func(media_group)
 
@@ -224,6 +229,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
         logging.error('Error during media download or send: %s', str(e))
     finally:
         shutil.rmtree(temp_dir)
+        logging.info('Removed temporary directory: %s', temp_dir) 
 
 async def send_tracking_info(update: Update, tracking_info: dict, reply_func) -> None:
     tracking = tracking_info.get('tracking', 'Không có mã')
