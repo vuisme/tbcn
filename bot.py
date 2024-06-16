@@ -189,7 +189,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
                         if not tmp_file_path.endswith('.mp4'):
                             try:
                                 with Image.open(tmp_file_path) as img:
-                                    if img.size[0] < 200 hoặc img.size[1] < 200:
+                                    if img.size[0] < 200 or img.size[1] < 200:
                                         logging.info('Image %s is too small, skipping.', tmp_file_path)
                                         os.remove(tmp_file_path)
                                         break
