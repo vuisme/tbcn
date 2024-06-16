@@ -112,7 +112,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
             tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
     
-            if không có tracking_numbers:
+            if not tracking_numbers:
                 await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
                 return
     
