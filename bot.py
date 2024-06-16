@@ -101,7 +101,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     logger.info(data)
                     img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
                     logger.info(img_urls)
-                    cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
+                    cleaned_urls = [clean_image_url(url) for url in img_urls]
                     if cleaned_urls:
                         await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
                     else:
