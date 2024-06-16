@@ -79,7 +79,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
                     logger.info(img_urls)
                     cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
-                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    if cleaned_urls:
+                        await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    else:
+                        await reply_func('Không tìm thấy URL ảnh hợp lệ.')
                 else:
                     await reply_func('Failed to fetch image details.')
             else:
@@ -97,7 +100,10 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     data = response.json()
                     img_urls = data.get('topGallery', []) + data.get('viewImage', []) + data.get('detailGalleryUrl', []) + data.get('videoGallery', []) + data.get('liveVideo', [])
                     cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
-                    await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    if cleaned_urls:
+                        await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    else:
+                        await reply_func('Không tìm thấy URL ảnh hợp lệ.')
                 else:
                     await reply_func('Failed to fetch image details.')
             else:
@@ -106,7 +112,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             # Lọc ra các mã vận đơn có độ dài từ 10 đến 20 ký tự
             tracking_numbers = re.findall(r'\b\w{10,20}\b', message_text)
     
-            if not tracking_numbers:
+            if không có tracking_numbers:
                 await reply_func('Không tìm thấy mã vận đơn hợp lệ trong tin nhắn của bạn.')
                 return
     
@@ -155,6 +161,11 @@ def clean_image_url(url: str) -> str:
     return url
 
 async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_media_group_func) -> None:
+    if not media_urls:
+        await reply_func("Không có URL hợp lệ để tải xuống.")
+        logging.warning('No valid URLs provided to download_and_send_media.')
+        return
+
     await reply_func("Đang tải ảnh lên...")
     logging.info('Downloading and sending media, URLs: %s', media_urls)
 
@@ -165,7 +176,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
         for media_url in media_urls:
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, như Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
                 success = False
                 attempts = 0
@@ -207,6 +218,11 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
 
             except Exception as e:
                 logging.error('Exception occurred while downloading media: %s, error: %s', media_url, str(e))
+
+        if not downloaded_files:
+            await reply_func("Không tải xuống được tệp nào.")
+            logging.warning('No files were downloaded.')
+            return
 
         media_groups = []
         for i in range(0, len(downloaded_files), 9):
