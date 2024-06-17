@@ -69,20 +69,26 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
             taobao_id = extract_taobao_id(message_text)
             if taobao_id:
                 url = API_TB
+                url2 = API2_TB
                 payload = {'id': taobao_id}
                 headers = {'Content-Type': 'application/json'}
                 response = requests.post(url, headers=headers, data=json.dumps(payload))
 
                 if response.status_code == 200:
                     data = response.json()
-                    logger.info(data)
-                    img_urls = data.get('images', []) + data.get('skubaseImages', []) + data.get('video', [])
-                    logger.info(img_urls)
-                    cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
-                    if cleaned_urls:
-                        await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                    time.sleep(3)
+                    response2 = requests.post(url2, headers=headers, data=json.dumps(payload))
+                    if response2.status_code == 200:
+                        data2 = response2.json()
+                        img_urls = data.get('video', []) + data2.get('descVideos', []) + data.get('images', []) + data.get('skubaseImages', []) + data.get('descImages', [])
+                        logger.info(img_urls)
+                        cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
+                        if cleaned_urls:
+                            await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                        else:
+                            await reply_func('Không tìm thấy URL ảnh hợp lệ.')
                     else:
-                        await reply_func('Không tìm thấy URL ảnh hợp lệ.')
+                        await reply_func('Failed to fetch image desc.')
                 else:
                     await reply_func('Failed to fetch image details.')
             else:
