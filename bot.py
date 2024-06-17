@@ -81,7 +81,8 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     response2 = requests.post(url2, headers=headers, data=json.dumps(payload))
                     if response2.status_code == 200:
                         data2 = response2.json()
-                        img_urls = data.get('video', []) + data2.get('descVideos', []) + data.get('images', []) + data.get('skubaseImages', []) + data.get('descImages', [])
+                        logger.info(data2)
+                        img_urls = data.get('video', []) + data2.get('descVideos', []) + data.get('images', []) + data.get('skubaseImages', []) + data2.get('descImages', [])
                         logger.info(img_urls)
                         cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
                         if cleaned_urls:
