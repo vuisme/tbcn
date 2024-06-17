@@ -16,6 +16,7 @@ from urllib.parse import urlparse
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
 API_URL = os.getenv('API_URL')
 API_TB = os.getenv('API_TB')
+API2_TB = os.getenv('API2_TB')
 API_PDD = os.getenv('API_PDD')
 
 # Thiết lập logging
