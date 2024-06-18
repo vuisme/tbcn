@@ -48,6 +48,7 @@ def get_reply_media_group_func(update: Update):
 async def handle_message(update: Update, context: CallbackContext) -> None:
     reply_func = get_reply_func(update)
     reply_media_group_func = get_reply_media_group_func(update)
+    reply_video_func = get_reply_video_func(update)
     message_text = None
 
     # Kiểm tra và xử lý tin nhắn từ tài khoản business
@@ -86,7 +87,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                         logger.info(img_urls)
                         cleaned_urls = list(set(clean_image_url(img['url']) for img in img_urls if 'url' in img))
                         if cleaned_urls:
-                            await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                            await download_and_send_media(update, cleaned_urls, reply_func, reply_video_func, reply_media_group_func)
                         else:
                             await reply_func('Không tìm thấy URL ảnh hợp lệ.')
                     else:
@@ -111,7 +112,7 @@ async def handle_message(update: Update, context: CallbackContext) -> None:
                     logger.info(img_urls)
                     cleaned_urls = [clean_image_url(url) for url in img_urls]
                     if cleaned_urls:
-                        await download_and_send_media(update, cleaned_urls, reply_func, reply_media_group_func)
+                        await download_and_send_media(update, cleaned_urls, reply_func, reply_video_func, reply_media_group_func)
                     else:
                         await reply_func('Không tìm thấy URL ảnh hợp lệ.')
                 else:
@@ -176,7 +177,7 @@ def get_reply_video_func(update: Update):
     elif hasattr(update, 'message') and update.message:
         return update.message.reply_video
 
-async def download_and_send_media(media_urls, reply_func, update):
+async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_video_func, reply_media_group_func) -> None:
     if not media_urls:
         await reply_func("Không có URL hợp lệ để tải xuống.")
         logging.warning('No valid URLs provided to download_and_send_media.')
@@ -243,8 +244,6 @@ async def download_and_send_media(media_urls, reply_func, update):
             logging.warning('No files were downloaded.')
             return
 
-        reply_video_func = get_reply_video_func(update)
-        
         # Gửi các video riêng lẻ
         if downloaded_videos:
             for video_path in downloaded_videos:
