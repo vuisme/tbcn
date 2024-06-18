@@ -170,7 +170,13 @@ def clean_image_url(url: str) -> str:
         return cleaned_url
     return url
 
-async def download_and_send_media(update: Update, media_urls: list, reply_func, reply_media_group_func) -> None:
+def get_reply_video_func(update: Update):
+    if hasattr(update, 'business_message') and update.business_message:
+        return update.business_message.reply_video
+    elif hasattr(update, 'message') and update.message:
+        return update.message.reply_video
+
+async def download_and_send_media(media_urls, reply_func, update):
     if not media_urls:
         await reply_func("Không có URL hợp lệ để tải xuống.")
         logging.warning('No valid URLs provided to download_and_send_media.')
@@ -182,11 +188,13 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
     temp_dir = tempfile.mkdtemp()
     logging.info('Created temporary directory: %s', temp_dir)
     try:
-        downloaded_files = []
+        downloaded_images = []
+        downloaded_videos = []
+        
         for media_url in media_urls:
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, như Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
                 success = False
                 attempts = 0
@@ -207,18 +215,19 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
                             tmp_file_path = tmp_file.name
                         logging.info('Downloaded file to %s', tmp_file_path)
 
-                        if not tmp_file_path.endswith('.mp4'):
+                        if tmp_file_path.endswith('.mp4'):
+                            downloaded_videos.append(tmp_file_path)
+                        else:
                             try:
                                 with Image.open(tmp_file_path) as img:
-                                    if img.size[0] < 200 or img.size[1] < 200:
+                                    if img.size[0] < 200 hoặc img.size[1] < 200:
                                         logging.info('Image %s is too small, skipping.', tmp_file_path)
                                         os.remove(tmp_file_path)
-                                        break
+                                    else:
+                                        downloaded_images.append(tmp_file_path)
                             except Exception as e:
                                 logging.error('Error checking image size for %s: %s', tmp_file_path, str(e))
                                 os.remove(tmp_file_path)
-                                break
-                        downloaded_files.append(tmp_file_path)
                         success = True
                     elif response.status_code == 420:
                         time.sleep(1)  # Chờ 1 giây trước khi thử lại
@@ -229,26 +238,31 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
             except Exception as e:
                 logging.error('Exception occurred while downloading media: %s, error: %s', media_url, str(e))
 
-        if not downloaded_files:
+        if not downloaded_images and not downloaded_videos:
             await reply_func("Không tải xuống được tệp nào.")
             logging.warning('No files were downloaded.')
             return
 
-        media_groups = []
-        for i in range(0, len(downloaded_files), 9):
-            media_group = downloaded_files[i:i + 9]
-            media_objects = []
-            for file_path in media_group:
-                if file_path.endswith('.mp4'):
-                    media_objects.append(InputMediaVideo(open(file_path, 'rb')))
-                else:
-                    media_objects.append(InputMediaPhoto(open(file_path, 'rb')))
-            media_groups.append(media_objects)
+        reply_video_func = get_reply_video_func(update)
+        
+        # Gửi các video riêng lẻ
+        if downloaded_videos:
+            for video_path in downloaded_videos:
+                await reply_video_func([InputMediaVideo(open(video_path, 'rb'))])
+                time.sleep(3)  # Nghỉ 3 giây giữa mỗi lần gửi video
+        
+        # Nhóm các hình ảnh và gửi chúng
+        if downloaded_images:
+            media_groups = []
+            for i in range(0, len(downloaded_images), 9):
+                media_group = downloaded_images[i:i + 9]
+                media_objects = [InputMediaPhoto(open(file_path, 'rb')) for file_path in media_group]
+                media_groups.append(media_objects)
 
-        logging.info('Sending media groups')
-        for media_group in media_groups:
-            await reply_media_group_func(media_group)
-            time.sleep(3)
+            logging.info('Sending media groups')
+            for media_group in media_groups:
+                await reply_media_group_func(media_group)  # Tăng thời gian chờ lên 60 giây
+                time.sleep(3)  # Nghỉ 3 giây giữa mỗi lần gửi media group
 
         await reply_func("Gửi tin nhắn hoàn tất.")
     except Exception as e:
@@ -256,7 +270,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
         logging.error('Error during media download or send: %s', str(e))
     finally:
         shutil.rmtree(temp_dir)
-        logging.info('Removed temporary directory: %s', temp_dir) 
+        logging.info('Removed temporary directory: %s', temp_dir)
 
 async def send_tracking_info(update: Update, tracking_info: dict, reply_func) -> None:
     tracking = tracking_info.get('tracking', 'Không có mã')
