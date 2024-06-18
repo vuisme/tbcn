@@ -247,7 +247,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
 
         logging.info('Sending media groups')
         for media_group in media_groups:
-            await reply_media_group_func(media_group, timeout=60)
+            await reply_media_group_func(media_group)
 
         await reply_func("Gửi tin nhắn hoàn tất.")
     except Exception as e:
@@ -270,7 +270,7 @@ async def send_tracking_info(update: Update, tracking_info: dict, reply_func) ->
     await asyncio.sleep(1)  # Thêm thời gian nghỉ để tránh spam
 
 def main() -> None:
-    application = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
+    application = ApplicationBuilder().token(TELEGRAM_TOKEN).read_timeout(30).write_timeout(30).build()
 
     # Thêm các handler
     application.add_handler(CommandHandler("start", start))
