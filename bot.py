@@ -247,7 +247,7 @@ async def download_and_send_media(update: Update, media_urls: list, reply_func, 
 
         logging.info('Sending media groups')
         for media_group in media_groups:
-            await reply_media_group_func(media_group)
+            await reply_media_group_func(media_group, timeout=60)
 
         await reply_func("Gửi tin nhắn hoàn tất.")
     except Exception as e:
