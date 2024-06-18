@@ -194,7 +194,7 @@ async def download_and_send_media(media_urls, reply_func, update):
         for media_url in media_urls:
             try:
                 headers = {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, như Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
                 }
                 success = False
                 attempts = 0
@@ -220,7 +220,7 @@ async def download_and_send_media(media_urls, reply_func, update):
                         else:
                             try:
                                 with Image.open(tmp_file_path) as img:
-                                    if img.size[0] < 200 hoặc img.size[1] < 200:
+                                    if img.size[0] < 200 or img.size[1] < 200:
                                         logging.info('Image %s is too small, skipping.', tmp_file_path)
                                         os.remove(tmp_file_path)
                                     else:
